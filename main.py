@@ -3,10 +3,11 @@ import random
 import math
 import numpy as np
 import time
+import keyboard
 
 random.seed(3314)
 matrix = [[random.uniform(0,2) for j in range(11)] for i in range(11)]
-k = 1.0 - 1 * 0.01 - 4 * 0.005 - 0.15
+k = 1.0 - 1 * 0.005 - 4 * 0.005 - 0.27
 multipliedMatrix = np.multiply(matrix, k)
 matrix_for_dir = np.floor(multipliedMatrix)
 print(matrix_for_dir)
@@ -76,7 +77,7 @@ def getStartPosition(pos1, pos_top):
     vec = vec / calculateDistance(pos1, pos_top)
     return pos1 + vec * rad
 
-def drawArrow(pos1, pos2, directed, k):
+def drawArrow(pos1, pos2, directed, k, isSearch):
     pos1 = np.array(pos1)
     pos2 = np.array(pos2)
     arr_vec = pos2 - pos1
@@ -96,7 +97,15 @@ def drawArrow(pos1, pos2, directed, k):
     turtle.penup()
     if directed:
         drawDirectedArrow(pos_end, pos_top, pos2)
-
+    if isSearch:
+        turtle.penup()
+        turtle.goto(pos2[0], pos2[1] - rad)
+        turtle.pendown()
+        turtle.color("green")
+        turtle.begin_fill()
+        turtle.circle(rad)
+        turtle.end_fill()
+        turtle.color("black")
 def drawDirectedArrow(pos_end, pos_top, pos2):
     width = 14 / 2
     length = 14
@@ -152,47 +161,143 @@ drawNumbers()
 drawCircles()
 drawNumbers()
 
-
-for i in range(11):
-    for j in range(i + 1):
-        if undir_matrix[i][j]:
-            if i == j:
-                drawSelfLoop(positions[i],30,True)
-            else:
-                if i == 7:
-                    k = 350
-                elif i == 8 and 200 <= calculateDistance(positions[i], positions[j]) <= 280:
-                    k = 50
-                elif i > 8:
-                    k = 30
+def drawGraph(isDir):
+    for i in range(11):
+        for j in range(i + 1):
+            if undir_matrix[i][j]:
+                if i == j:
+                    drawSelfLoop(positions[i],30,isDir)
                 else:
-                    k = 120
-                drawArrow(positions[i], positions[j], directed=True, k=k)
+                    if i == 7:
+                        k = 350
+                    elif i == 8 and 200 <= calculateDistance(positions[i], positions[j]) <= 280:
+                        k = 50
+                    elif i > 8:
+                        k = 30
+                    else:
+                        k = 120
+                    drawArrow(positions[i], positions[j], directed=isDir, k=k, isSearch = False)
 
-time.sleep(6)
-turtle.hideturtle()
+    time.sleep(3)
 
 
+def bfs(matrix, vertexes):
+    bfs_list = [0 for i in range(len(matrix))]
+    queue_list = []
+    bfs_matrix = [[0] * len(matrix) for i in range(len(matrix))]
+
+    number = 1
+    start = 0
+    turtle.penup()
+    turtle.goto(vertexes[start][0], vertexes[start][1] - rad)
+    turtle.pendown()
+    turtle.color("green")
+    turtle.begin_fill()
+    turtle.circle(rad)
+    turtle.end_fill()
+    turtle.color("black")
+    while any(element == 0 for element in bfs_list):
+        bfs_list[start] = number
+        queue_list.append(start)
+        print(bfs_list)
+
+        while queue_list:
+            i = queue_list[0]
+            row = vertexes[i]
+            for j in range(len(matrix[i])):
+                element = vertexes[j]
+                if matrix[i][j] and not bfs_list[j]:
+                    number += 1
+                    bfs_list[j] = number
+                    queue_list.append(j)
+                    bfs_matrix[i][j] = 1
+                    print(bfs_list)
+                    turtle.pencolor('red')
+                    drawArrow(positions[i], positions[j], directed=True, k=120, isSearch =True)
+                    turtle.pencolor('black')
+                    keyboard.wait('space')
+
+            queue_list.pop(0)
+
+        if any(element == 0 for element in bfs_list):
+            for element in bfs_list:
+                if element == 0:
+                    start = bfs_list.index(element)
+                    break
+
+    print(f"\nBFS list:\n{bfs_list}")
+    print(f"BFS matrix:")
+    for i in range(len(bfs_matrix)):
+        print(bfs_matrix[i])
+    print()
+
+
+
+def dfs(matrix, vertexes):
+    dfs_list = [0 for i in range(len(matrix))]
+    dfs_matrix = [[0] * len(matrix) for i in range(len(matrix))]
+    print(dfs_list)
+    stack_list = []
+
+    number = 1
+    start = 0
+    is_continue = False
+    turtle.penup()
+    turtle.goto(vertexes[start][0], vertexes[start][1] - rad)
+    turtle.pendown()
+    turtle.color("green")
+    turtle.begin_fill()
+    turtle.circle(rad)
+    turtle.end_fill()
+    turtle.color("black")
+    while any(element == 0 for element in dfs_list):
+        dfs_list[start] = number
+        stack_list.append(start)
+        print(dfs_list)
+
+        while stack_list:
+            i = stack_list[-1]
+            row = vertexes[i]
+            for j in range(len(matrix[i])):
+                element = vertexes[j]
+                if matrix[i][j] and not dfs_list[j]:
+                    number += 1
+                    dfs_list[j] = number
+                    stack_list.append(j)
+                    print(dfs_list)
+                    turtle.pencolor('red')
+                    drawArrow(positions[i], positions[j], directed=True, k=120, isSearch =True)
+                    turtle.pencolor('black')
+                    keyboard.wait('space')
+                    is_continue = True
+                    dfs_matrix[i][j] = 1
+                    break
+                else:
+                    is_continue = False
+
+            if is_continue:
+                continue
+
+            stack_list.pop(-1)
+
+        if any(element == 0 for element in dfs_list):
+            for element in dfs_list:
+                if element == 0:
+                    start = dfs_list.index(element)
+                    break
+
+    print(f"\nDFS list:\n{dfs_list}")
+    print(f"DFS matrix:")
+    for i in range(len(dfs_matrix)):
+        print(dfs_matrix[i])
+drawGraph(True)
+bfs(undir_matrix, positions)
+drawNumbers()
+time.sleep(3)
 turtle.clear()
-
 drawNumbers()
 drawCircles()
+drawGraph(True)
+dfs(undir_matrix, positions)
 drawNumbers()
-
-for i in range(11):
-    for j in range(i + 1):
-        if undir_matrix[i][j]:
-            if i == j:
-                drawSelfLoop(positions[i],30,False)
-            else:
-                if i == 7:
-                    k = 350
-                elif i == 8 and 200 <= calculateDistance(positions[i], positions[j]) <= 280:
-                    k = 50
-                elif i > 8:
-                    k = 30
-                else:
-                    k = 120
-                drawArrow(positions[i], positions[j], directed=False, k=k)
-
-time.sleep(6)
+turtle.done()
